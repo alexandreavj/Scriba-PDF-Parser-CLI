@@ -19,13 +19,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Scriba PDF Parser"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser CLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Scriba PDF Parser CLI"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6E27D2412F671F72001BB8B0 /* Scriba PDF Parser */ = {
+		6E27D2412F671F72001BB8B0 /* Scriba PDF Parser CLI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Scriba PDF Parser";
+			path = "Scriba PDF Parser CLI";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -44,7 +44,7 @@
 		6E27D2362F671F72001BB8B0 = {
 			isa = PBXGroup;
 			children = (
-				6E27D2412F671F72001BB8B0 /* Scriba PDF Parser */,
+				6E27D2412F671F72001BB8B0 /* Scriba PDF Parser CLI */,
 				6E27D2402F671F72001BB8B0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,7 +52,7 @@
 		6E27D2402F671F72001BB8B0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser */,
+				6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser CLI */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,9 +60,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6E27D23E2F671F72001BB8B0 /* Scriba PDF Parser */ = {
+		6E27D23E2F671F72001BB8B0 /* Scriba PDF Parser CLI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6E27D2462F671F72001BB8B0 /* Build configuration list for PBXNativeTarget "Scriba PDF Parser" */;
+			buildConfigurationList = 6E27D2462F671F72001BB8B0 /* Build configuration list for PBXNativeTarget "Scriba PDF Parser CLI" */;
 			buildPhases = (
 				6E27D23B2F671F72001BB8B0 /* Sources */,
 				6E27D23C2F671F72001BB8B0 /* Frameworks */,
@@ -73,13 +73,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				6E27D2412F671F72001BB8B0 /* Scriba PDF Parser */,
+				6E27D2412F671F72001BB8B0 /* Scriba PDF Parser CLI */,
 			);
-			name = "Scriba PDF Parser";
+			name = "Scriba PDF Parser CLI";
 			packageProductDependencies = (
 			);
 			productName = "Scriba PDF Parser";
-			productReference = 6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser */;
+			productReference = 6E27D23F2F671F72001BB8B0 /* Scriba PDF Parser CLI */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -97,7 +97,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 6E27D23A2F671F72001BB8B0 /* Build configuration list for PBXProject "Scriba PDF Parser" */;
+			buildConfigurationList = 6E27D23A2F671F72001BB8B0 /* Build configuration list for PBXProject "Scriba PDF Parser CLI" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -111,7 +111,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				6E27D23E2F671F72001BB8B0 /* Scriba PDF Parser */,
+				6E27D23E2F671F72001BB8B0 /* Scriba PDF Parser CLI */,
 			);
 		};
 /* End PBXProject section */
@@ -270,7 +270,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6E27D23A2F671F72001BB8B0 /* Build configuration list for PBXProject "Scriba PDF Parser" */ = {
+		6E27D23A2F671F72001BB8B0 /* Build configuration list for PBXProject "Scriba PDF Parser CLI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6E27D2442F671F72001BB8B0 /* Debug */,
@@ -279,7 +279,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6E27D2462F671F72001BB8B0 /* Build configuration list for PBXNativeTarget "Scriba PDF Parser" */ = {
+		6E27D2462F671F72001BB8B0 /* Build configuration list for PBXNativeTarget "Scriba PDF Parser CLI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6E27D2472F671F72001BB8B0 /* Debug */,
