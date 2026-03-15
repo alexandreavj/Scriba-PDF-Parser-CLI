@@ -11,7 +11,7 @@ import PDFKit
 struct TextExtractor {
     let pdfURL: URL
     
-    func extractText() throws -> (String, NSMutableAttributedString) {
+    func extractText() throws -> NSMutableAttributedString {
         if let document = PDFDocument(url: self.pdfURL) {
             let pageCount = document.pageCount
             let documentContent = NSMutableAttributedString()
@@ -22,7 +22,7 @@ struct TextExtractor {
                 documentContent.append(pageContent)
             }
             
-            return (documentContent.string, documentContent)
+            return documentContent
         } else {
             throw ExtractionError.unableToLoadPDF(message: "Could not load PDF file with path \(self.pdfURL.path).");
         }
