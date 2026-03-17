@@ -22,8 +22,8 @@ func main() {
     
     do {
         let text: [NSMutableAttributedString] = try textExtractor.extractText()
-        var combinedText = NSMutableAttributedString()
-        text.forEach(_.append(to: &combinedText))
+        let combinedText = NSMutableAttributedString()
+        text.forEach { combinedText.append($0) }
         print(combinedText.string)
     } catch {
         fputs("Extraction failed: \(error)\n", stderr)
