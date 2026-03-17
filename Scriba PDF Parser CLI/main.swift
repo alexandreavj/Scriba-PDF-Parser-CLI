@@ -21,8 +21,10 @@ func main() {
     let textExtractor: TextExtractor = TextExtractor(pdfURL: pdfURL)
     
     do {
-        let text: NSMutableAttributedString = try textExtractor.extractText()
-        print(text.string)
+        let text: [NSMutableAttributedString] = try textExtractor.extractText()
+        var combinedText = NSMutableAttributedString()
+        text.forEach(_.append(to: &combinedText))
+        print(combinedText.string)
     } catch {
         fputs("Extraction failed: \(error)\n", stderr)
     }
