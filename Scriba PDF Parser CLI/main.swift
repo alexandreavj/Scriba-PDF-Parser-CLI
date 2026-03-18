@@ -21,7 +21,7 @@ func main() {
     let textExtractor: TextExtractor = TextExtractor(pdfURL: pdfURL)
     
     do {
-        let text: [NSMutableAttributedString] = try textExtractor.extractText()
+        let text: [NSAttributedString] = try textExtractor.extractText()
         let combinedText = NSMutableAttributedString()
         text.forEach { combinedText.append($0) }
         print(combinedText.string)

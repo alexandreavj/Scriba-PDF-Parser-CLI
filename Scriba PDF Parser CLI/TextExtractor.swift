@@ -32,7 +32,7 @@ struct TextExtractor {
     
     /// Extracts attributed text for each page of the PDF.
     ///
-    /// The resulting array contains one `NSMutableAttributedString` per page,
+    /// The resulting array contains one `NSAttributedString` per page,
     /// in order from the first page to the last. Pages that fail to load or parse are skipped
     /// with a console message; successfully parsed pages are returned.
     ///
@@ -40,23 +40,29 @@ struct TextExtractor {
     /// - Throws: ``TextExtractor/ExtractionError``. Specifically,
     ///   ``TextExtractor/ExtractionError/unableToLoadPDF(message:)``
     ///   if the PDF cannot be opened from `pdfURL`.
-    func extractText() throws -> [NSMutableAttributedString] {
+    func extractText() throws -> [NSAttributedString] {
+        
         if let document = PDFDocument(url: self.pdfURL) {
             let pageCount = document.pageCount
-            var documentContent: [NSMutableAttributedString] = []
+            var documentContent: [NSAttributedString] = []
 
             for i in 0 ..< pageCount {
-                documentContent.append(NSMutableAttributedString())
+                // Empty NSAttributedString as default for empty/failed page
+                documentContent.append(NSAttributedString())
                 
+                // Load PDF page
                 guard let page = document.page(at: i) else {
                     print("Could not load page \(i+1).")
                     continue
                 }
+                // Extract PDF text as an attributed string
                 guard let pageContent = page.attributedString else {
                     print("Could not parse text from page \(i+1).")
                     continue
                 }
-                documentContent[i].append(pageContent)
+                
+                // Update array with text for the given page
+                documentContent[i] = pageContent
             }
             
             return documentContent
@@ -68,6 +74,7 @@ struct TextExtractor {
     
     /// Errors that can occur while preparing or loading the PDF for extraction.
     enum ExtractionError: Error {
+        
         /// The PDF file could not be opened.
         ///
         /// - Parameter message: A human-readable description of the failure,
