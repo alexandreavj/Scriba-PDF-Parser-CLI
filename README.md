@@ -1,0 +1,1 @@
+# Scriba - PDF Parser [CLI]
