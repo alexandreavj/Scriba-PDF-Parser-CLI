@@ -16,8 +16,7 @@ import PDFKit
 ///
 /// Typical usage:
 /// ```swift
-/// let extractor = TextExtractor(pdfURL: url)
-/// let pages = try extractor.extractText()
+/// let pages = try TextExtractor.extractText(from: url)
 /// let combined = pages.reduce(into: NSMutableAttributedString()) { $0.append($1) }
 /// print(combined.string)
 /// ```
@@ -26,23 +25,20 @@ import PDFKit
 ///   the main thread if you expect large files.
 struct TextExtractor {
     
-    /// The file URL of the PDF to parse.
-    let pdfURL: URL
-    
-    
     /// Extracts attributed text for each page of the PDF.
     ///
     /// The resulting array contains one `NSAttributedString` per page,
     /// in order from the first page to the last. Pages that fail to load or parse are skipped
     /// with a console message; successfully parsed pages are returned.
     ///
+    /// - Parameter pdfURL: URL for the PDF document to extract text from.
     /// - Returns: An array of per-page attributed strings.
     /// - Throws: ``TextExtractor/ExtractionError``. Specifically,
     ///   ``TextExtractor/ExtractionError/unableToLoadPDF(message:)``
     ///   if the PDF cannot be opened from `pdfURL`.
-    func extractText() throws -> [NSAttributedString] {
+    static func extractText(from pdfURL: URL) throws -> [NSAttributedString] {
         
-        if let document = PDFDocument(url: self.pdfURL) {
+        if let document = PDFDocument(url: pdfURL) {
             let pageCount = document.pageCount
             var documentContent: [NSAttributedString] = []
 
@@ -67,7 +63,7 @@ struct TextExtractor {
             
             return documentContent
         } else {
-            throw ExtractionError.unableToLoadPDF(message: "Could not load PDF file with path \(self.pdfURL.path).");
+            throw ExtractionError.unableToLoadPDF(message: "Could not load PDF file with path \(pdfURL.path).");
         }
     }
     
