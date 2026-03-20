@@ -61,3 +61,7 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
+
+# Resources for Testing
+Resources for Testing/
+

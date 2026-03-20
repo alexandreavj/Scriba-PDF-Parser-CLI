@@ -27,6 +27,15 @@ func main() {
     } catch {
         fputs("Text extraction failed: \(error)\n", stderr)
     }
+    
+    do {
+        let extractedRasters: ([ExtractedImage], URL) = try RasterExtractor.extractRasters(from: pdfURL)
+        extractedRasters.0.forEach {
+            print($0.name)
+        }
+    } catch {
+        fputs("Raster extraction failed: \(error)\n", stderr)
+    }
 
 }
 

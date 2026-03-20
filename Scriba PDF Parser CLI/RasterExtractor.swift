@@ -9,9 +9,159 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
+import PDFKit
 
 
+/// A lightweight class representing a raster image reference in a PDF page.
+///
+/// This class stores metadata about an image embedded in a PDF, including the page
+/// it was found on and the PDF XObject name. It does **not** store the image bytes.
+class ExtractedImage {
+    
+    /// Creates a new image reference.
+    /// - Parameters:
+    ///   - pageIndex: 1-based index of the page where the image was found.
+    ///   - name: The PDF XObject key/name under which the image was referenced (e.g., "Im1").
+    init(pageIndex: Int, name: String) {
+        self.pageIndex = pageIndex
+        self.name = name
+    }
+    
+    /// 1-based index of the page within the `CGPDFDocument` where the image was found.
+    let pageIndex: Int
+    
+    /// The PDF XObject key (name) under which this image was referenced.
+    let name: String
+    
+}
+
+
+/// A value type representing a single raster image extracted from a PDF page.
+///
+/// Instances of `ExtractedImage` are produced by `extractImages(from:)` when
+/// traversing a PDF's XObject dictionaries. Each instance contains the raw
+/// bytes of the image stream as found in the PDF, along with the image's
+/// PDF name, the page index it was found on, and the detected data format.
+///
+/// Use `fileExtension(for:data:)` and `saveImage(_:to:index:)` to derive a
+/// suitable filename/extension and persist it to disk.
+final class ExtractedImageWithData: ExtractedImage {
+    
+    /// Creates a new instance with raw data and format information.
+    /// - Parameters:
+    ///   - pageIndex: 1-based index of the page where the image was found.
+    ///   - name: The PDF XObject key/name.
+    ///   - data: The raw image stream data extracted from the PDF.
+    ///   - format: The format hint reported by Core Graphics (e.g., `.jpegEncoded`, `.JPEG2000`, `.raw`).
+    init(pageIndex: Int, name: String, data: CFData, format: CGPDFDataFormat) {
+        self.data = data
+        self.format = format
+        super.init(pageIndex: pageIndex, name: name)
+    }
+    
+    /// The raw image stream data as extracted from the PDF. This may already be
+    /// a complete file (e.g., JPEG/PNG) or a raw/encoded stream that requires decoding.
+    let data: CFData
+    
+    /// The format hint reported by Core Graphics for the image stream (e.g., `.jpegEncoded`, `.JPEG2000`, `.raw`).
+    let format: CGPDFDataFormat
+    
+}
+
+
+/// A lightweight accumulator used during dictionary traversal for a single page.
+///
+/// `ExtractionContext` is passed through `CGPDFDictionaryApplyBlock` as an opaque
+/// pointer so the callback can append discovered image streams while retaining
+/// knowledge of the current page index.
+final class ExtractionContext {
+    
+    /// 1-based page index associated with this traversal.
+    let pageIndex: Int
+    
+    /// Collected images discovered while iterating the page's XObject dictionary.
+    var images: [ExtractedImageWithData] = []
+    
+    /// Creates a new context for the given page index.
+    /// - Parameter pageIndex: The 1-based index of the page being processed.
+    init(pageIndex: Int) { self.pageIndex = pageIndex }
+    
+}
+
+
+/// A lightweight utility for extracting raster images from a PDF document using PDFKit and Core Graphics.
+///
+/// `RasterExtractor` scans a PDF file, page by page, traversing each page's XObject dictionary
+/// to locate embedded raster images (`Subtype == "Image"`). For each image found, it produces
+/// an `ExtractedImageWithData` containing the page index, PDF XObject name, raw bytes, and
+/// Core Graphics format hint.
+///
+/// Images can be optionally saved to disk. JPEG and PNG streams are written directly,
+/// while other formats are decoded and re-encoded as PNG to ensure file compatibility.
+///
+/// Typical usage:
+/// ```swift
+/// let (images, outputDir) = try RasterExtractor.extractRaster(from: pdfURL, to: outputDirectory)
+/// print("Extracted \(images.count) images to \(outputDir.path)")
+/// ```
+///
+/// - Note: This type performs synchronous I/O when loading the PDF and writing files.
+///   For large PDFs, run it off the main thread to avoid blocking the UI.
+///
+/// - Warning: Images with unknown or raw encodings may be re-encoded as PNG, which can
+///   alter their original format or color representation.
 struct RasterExtractor {
+    
+    /// Extracts all raster images from a PDF and optionally saves them to disk.
+    ///
+    /// The function scans every page's XObject dictionary, identifies streams with
+    /// `Subtype == "Image"`, and collects their bytes. Images are saved to disk if
+    /// `outputDir` is provided or defaults to the PDF's folder. JPEG/PNG streams are
+    /// written directly; other formats are re-encoded as PNG.
+    ///
+    /// - Parameters:
+    ///   - pdfURL: URL of the PDF file to extract images from.
+    ///   - outputDir: Optional directory to save extracted images. Defaults to the PDF's folder.
+    /// - Returns: A tuple containing:
+    ///     1. Array of `ExtractedImageWithData` representing successfully extracted images.
+    ///     2. The directory URL where images were saved.
+    /// - Throws: `ExtractionError.unableToLoadPDF` if the PDF could not be opened.
+    static func extractRasters(from pdfURL: URL, to outputDir: URL? = nil) throws -> ([ExtractedImage], URL) {
+        
+        if let document = PDFDocument(url: pdfURL)?.documentRef {
+            
+            // Extract raster images from document
+            var extractedRasters = extractImages(from: document)
+            
+            // Check if outputDir exists
+            let outputDir = outputDir ?? pdfURL.deletingLastPathComponent()
+            
+            // Save images to file
+            var imageCounterInPage = 1, previousPage = 1
+            var failedSaves: [Int] = []
+            for (i, image) in extractedRasters.enumerated() {
+                if previousPage != image.pageIndex {
+                    imageCounterInPage = 1
+                    previousPage = image.pageIndex
+                }
+                
+                if !saveImage(image, to: outputDir, index: imageCounterInPage) {
+                    failedSaves.append(i)
+                }
+            }
+            
+            // Remove images that were not saved to file
+            for i in failedSaves.sorted(by: >) {
+                extractedRasters.remove(at: i)
+            }
+            
+            return (extractedRasters, outputDir)
+            
+        } else {
+            throw ExtractionError.unableToLoadPDF(message: "Could not load PDF file with path \(pdfURL.path).");
+        }
+    }
+    
     
     /// Returns the page's XObject dictionary, if available.
     ///
@@ -67,53 +217,6 @@ struct RasterExtractor {
     }
     
     
-    /// A value type representing a single raster image extracted from a PDF page.
-    ///
-    /// Instances of `ExtractedImage` are produced by `extractImages(from:)` when
-    /// traversing a PDF's XObject dictionaries. Each instance contains the raw
-    /// bytes of the image stream as found in the PDF, along with the image's
-    /// PDF name, the page index it was found on, and the detected data format.
-    ///
-    /// Use `fileExtension(for:data:)` and `saveImage(_:to:index:)` to derive a
-    /// suitable filename/extension and persist it to disk.
-    struct ExtractedImage {
-        
-        /// 1-based index of the page within the `CGPDFDocument` where the image was found.
-        let pageIndex: Int
-        
-        /// The PDF XObject key (name) under which this image was referenced.
-        let name: String
-        
-        /// The raw image stream data as extracted from the PDF. This may already be
-        /// a complete file (e.g., JPEG/PNG) or a raw/encoded stream that requires decoding.
-        let data: CFData
-        
-        /// The format hint reported by Core Graphics for the image stream (e.g., `.jpegEncoded`, `.JPEG2000`, `.raw`).
-        let format: CGPDFDataFormat
-        
-    }
-    
-    
-    /// A lightweight accumulator used during dictionary traversal for a single page.
-    ///
-    /// `ExtractionContext` is passed through `CGPDFDictionaryApplyBlock` as an opaque
-    /// pointer so the callback can append discovered image streams while retaining
-    /// knowledge of the current page index.
-    final class ExtractionContext {
-        
-        /// 1-based page index associated with this traversal.
-        let pageIndex: Int
-        
-        /// Collected images discovered while iterating the page's XObject dictionary.
-        var images: [ExtractedImage] = []
-        
-        /// Creates a new context for the given page index.
-        /// - Parameter pageIndex: The 1-based index of the page being processed.
-        init(pageIndex: Int) { self.pageIndex = pageIndex }
-        
-    }
-    
-    
     /// Extracts raster images from all pages in the given PDF document.
     ///
     /// This function walks each page's XObject dictionary and collects any entries whose
@@ -127,9 +230,9 @@ struct RasterExtractor {
     ///
     /// - Parameter document: A `CGPDFDocument` to scan for image XObjects.
     /// - Returns: An array of `ExtractedImage` instances found across all pages, in page order.
-    private static func extractImages(from document: CGPDFDocument, to outputDir: URL? = nil) -> [ExtractedImage] {
+    private static func extractImages(from document: CGPDFDocument) -> [ExtractedImageWithData] {
         
-        var results: [ExtractedImage] = []
+        var results: [ExtractedImageWithData] = []
         
         for pageIndex in 1...document.numberOfPages {
             
@@ -191,7 +294,7 @@ struct RasterExtractor {
                 
                 
                 // Append extracted image to `context` (ExtractionContext)
-                ctx.images.append(ExtractedImage(
+                ctx.images.append(ExtractedImageWithData(
                     pageIndex: ctx.pageIndex,
                     name: name,
                     data: data,
@@ -258,7 +361,7 @@ struct RasterExtractor {
     ///
     /// - Note: Filenames are composed as `page<pageIndex>_<name>_<index>.<ext>`. When re-encoding, the
     ///   extension is `.png`. Errors are printed to the console for diagnostic purposes.
-    private static func saveImage(_ extracted: ExtractedImage, to outputDir: URL, index: Int) -> Bool {
+    private static func saveImage(_ extracted: ExtractedImageWithData, to outputDir: URL, index: Int) -> Bool {
         
         let ext = fileExtension(for: extracted.format, data: extracted.data)
         let filename = "page\(extracted.pageIndex)_\(extracted.name)_\(index).\(ext)"
