@@ -5,7 +5,7 @@
 //  Created by Alexandre Jacob on 15/03/2026.
 //
 
-import PDFKit
+import PDFKit 
 
 
 /// A lightweight utility for extracting attributed text from a PDF document using PDFKit.
@@ -67,15 +67,5 @@ struct TextExtractor {
         }
     }
     
-    
-    /// Errors that can occur while preparing or loading the PDF for extraction.
-    enum ExtractionError: Error {
-        
-        /// The PDF file could not be opened.
-        ///
-        /// - Parameter message: A human-readable description of the failure,
-        ///   including the path when available.
-        case unableToLoadPDF(message: String)
-    }
 }
 
