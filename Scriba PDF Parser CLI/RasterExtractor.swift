@@ -38,34 +38,67 @@ class ExtractedImage {
 
 /// A value type representing a single raster image extracted from a PDF page.
 ///
-/// Instances of `ExtractedImage` are produced by `extractImages(from:)` when
-/// traversing a PDF's XObject dictionaries. Each instance contains the raw
-/// bytes of the image stream as found in the PDF, along with the image's
-/// PDF name, the page index it was found on, and the detected data format.
+/// `ExtractedImageWithData` instances are created during PDF parsing (e.g. via
+/// `extractImages(from:)`) when traversing a page’s XObject dictionaries.
+/// Each instance encapsulates the raw image stream along with metadata such as
+/// its PDF identifier, source page, dimensions, and an inferred data format.
 ///
-/// Use `fileExtension(for:data:)` and `saveImage(_:to:index:)` to derive a
-/// suitable filename/extension and persist it to disk.
+/// The `data` property contains the image stream exactly as stored in the PDF.
+/// Depending on the `format`, this may already represent a complete, directly
+/// usable file (e.g. JPEG or JPEG2000), or it may require additional decoding
+/// (e.g. raw or compressed bitmap data).
+///
+/// To persist the image to disk, use helper utilities such as
+/// `fileExtension(for:data:)` to determine an appropriate file extension,
+/// and `saveImage(_:to:index:)` to write the data safely.
+///
+/// - Note:
+///   - The `format` value is a hint provided by Core Graphics (`CGPDFDataFormat`)
+///     and may not always fully describe the encoding.
+///   - For `.raw` formats, additional processing (e.g. color space handling,
+///     decompression, or bitmap reconstruction) is typically required.
+///   - `width` and `height` represent the pixel dimensions as defined in the PDF,
+///     which may differ from the rendered size depending on transformations.
 final class ExtractedImageWithData: ExtractedImage {
-    
-    /// Creates a new instance with raw data and format information.
+
+    /// Creates a new extracted image instance.
+    ///
     /// - Parameters:
-    ///   - pageIndex: 1-based index of the page where the image was found.
-    ///   - name: The PDF XObject key/name.
+    ///   - pageIndex: The 1-based index of the page where the image was found.
+    ///   - name: The PDF XObject name/key associated with the image.
     ///   - data: The raw image stream data extracted from the PDF.
-    ///   - format: The format hint reported by Core Graphics (e.g., `.jpegEncoded`, `.JPEG2000`, `.raw`).
-    init(pageIndex: Int, name: String, data: CFData, format: CGPDFDataFormat) {
+    ///   - format: A Core Graphics format hint describing the encoding
+    ///             (e.g. `.jpegEncoded`, `.JPEG2000`, `.raw`).
+    ///   - width: The pixel width of the image as defined in the PDF.
+    ///   - height: The pixel height of the image as defined in the PDF.
+    init(pageIndex: Int, name: String, data: CFData, format: CGPDFDataFormat, width: Int, height: Int) {
         self.data = data
         self.format = format
+        self.width = width
+        self.height = height
         super.init(pageIndex: pageIndex, name: name)
     }
-    
-    /// The raw image stream data as extracted from the PDF. This may already be
-    /// a complete file (e.g., JPEG/PNG) or a raw/encoded stream that requires decoding.
+
+    /// The raw image stream data extracted from the PDF.
+    ///
+    /// This may represent:
+    /// - A complete encoded image (e.g. JPEG, JPEG2000), or
+    /// - A raw or compressed pixel stream requiring decoding.
     let data: CFData
-    
-    /// The format hint reported by Core Graphics for the image stream (e.g., `.jpegEncoded`, `.JPEG2000`, `.raw`).
+
+    /// A format hint describing how the image data is encoded.
+    ///
+    /// This value originates from Core Graphics (`CGPDFDataFormat`) and can
+    /// be used to guide decoding or file extension selection, but should not
+    /// be treated as authoritative in all cases.
     let format: CGPDFDataFormat
-    
+
+    /// The pixel width of the image as specified in the PDF.
+    let width: Int
+
+    /// The pixel height of the image as specified in the PDF.
+    let height: Int
+
 }
 
 
@@ -293,12 +326,21 @@ struct RasterExtractor {
                 guard let data = CGPDFStreamCopyData(stream, &format) else { return true }
                 
                 
+                // Obtain raster dimensions
+                var pdfWidth:  CGPDFInteger = 0
+                var pdfHeight: CGPDFInteger = 0
+                CGPDFDictionaryGetInteger(dict, "Width",  &pdfWidth)
+                CGPDFDictionaryGetInteger(dict, "Height", &pdfHeight)
+                
+                
                 // Append extracted image to `context` (ExtractionContext)
                 ctx.images.append(ExtractedImageWithData(
                     pageIndex: ctx.pageIndex,
                     name: name,
                     data: data,
-                    format: format
+                    format: format,
+                    width: Int(pdfWidth),
+                    height: Int(pdfHeight)
                 ))
                 
                 // Returns true from the closure, meaning "move to the next entry"
@@ -401,14 +443,8 @@ struct RasterExtractor {
             }
         }
         
-        // Fallback: write raw bytes
-        let imageData = extracted.data as Data
-        do {
-            try imageData.write(to: fileURL)
-            print("Saved raw bytes: \(filename)")
-        } catch {
-            print("Failed to save \(filename): \(error)")
-        }
+        // Raw pixels: use Width/Height from the stream dict to reconstruct
+        // TODO
         
         return true
     }
