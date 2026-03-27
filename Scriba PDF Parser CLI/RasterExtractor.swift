@@ -380,46 +380,23 @@ struct RasterExtractor {
             }
         }
         
-        // Try to decode the stream into a CGImage and re-encode it as PNG with ImageIO
+        // Encoded formats (JP2, TIFF, etc.): let ImageIO decode then re-encode as PNG
+        let pngURL = outputDir.appendingPathComponent("page\(extracted.pageIndex)_\(extracted.name)_\(index).png")
         if let source = CGImageSourceCreateWithData(extracted.data, nil),
-           let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
-            // Build the output URL for the PNG
-            let pngURL = outputDir.appendingPathComponent("page\(extracted.pageIndex)_\(extracted.name)_\(index).png")
-            
-            // Option A: Write directly to URL via destination + finalize
-            if let dest = CGImageDestinationCreateWithURL(pngURL as CFURL, UTType.png.identifier as CFString, 1, nil) {
-                CGImageDestinationAddImage(dest, cgImage, nil)
-                if CGImageDestinationFinalize(dest) {
-                    print("Saved (re-encoded) \(pngURL.lastPathComponent)")
-                    return true
-                } else {
-                    print("Failed to finalize PNG destination at \(pngURL.path); retrying via data sink…")
-                }
-            } else {
-                print("Failed to create PNG destination at \(pngURL.path); retrying via data sink…")
+           let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil),
+           let md = CFDataCreateMutable(nil, 0),
+           let dest = CGImageDestinationCreateWithData(md, UTType.png.identifier as CFString, 1, nil) {
+            CGImageDestinationAddImage(dest, cgImage, nil)
+            guard CGImageDestinationFinalize(dest) else {
+                print("Failed to encode \(pngURL.lastPathComponent) as PNG")
+                return false
             }
-            
-            // Option B: Encode into memory first, then write with do/catch for detailed errors
-            let mutableData = CFDataCreateMutable(nil, 0)
-            if let md = mutableData,
-               let dataDest = CGImageDestinationCreateWithData(md, UTType.png.identifier as CFString, 1, nil) {
-                CGImageDestinationAddImage(dataDest, cgImage, nil)
-                if CGImageDestinationFinalize(dataDest) {
-                    // Write the encoded PNG bytes via do/catch to report filesystem errors
-                    do {
-                        try (md as Data).write(to: pngURL)
-                        print("Saved (re-encoded via data) \(pngURL.lastPathComponent)")
-                        return true
-                    } catch {
-                        print("Failed to write PNG data to \(pngURL.path): \(error)")
-                        return false
-                    }
-                } else {
-                    print("Failed to finalize in-memory PNG encoding for \(pngURL.lastPathComponent)")
-                    return false
-                }
-            } else {
-                print("Failed to create in-memory PNG destination")
+            do {
+                try (md as Data).write(to: pngURL)
+                print("Saved (re-encoded) \(pngURL.lastPathComponent)")
+                return true
+            } catch {
+                print("Failed to write \(pngURL.lastPathComponent): \(error)")
                 return false
             }
         }
